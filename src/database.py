@@ -30,6 +30,22 @@ class Transaction(Base):
     fee = Column(Float)
     size = Column(Integer)
 
+class Input(Base):
+    __tablename__ = 'inputs'
+
+    id = Column(Integer, primary_key=True)
+    txid = Column(String)
+    vout = Column(Integer)
+
+class Output(Base):
+    __tablename__ = 'outputs'
+
+    id = Column(Integer, primary_key=True)
+    txid = Column(String)
+    n = Column(Integer)
+    value = Column(Float)
+    address = Column(String)
+
 def init_db():
     engine = create_engine(DATABASE_URL)
     Base.metadata.create_all(engine)

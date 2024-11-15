@@ -1,6 +1,9 @@
+import time
 from bitcoin_rpc import BitcoinRPC
-from database import init_db, Block, Transaction
+from database import Input, Output, init_db, Block, Transaction
 from datetime import datetime
+
+from utils import scriptpubkey_to_address
 
 class BitcoinIndexer:
     def __init__(self):
@@ -34,20 +37,24 @@ class BitcoinIndexer:
                 fee=self._calculate_fee(tx),
                 size=tx['size']
             )
+            for vin in tx['vin']:
+                if 'txid' not in vin or 'vout' not in vin:
+                    continue
+                input = Input(txid=vin['txid'], vout=vin['vout'])
+                self.db.add(input)
+            for vout in tx['vout']:
+                if 'n' not in vout or 'value' not in vout or 'scriptPubKey' not in vout:
+                    continue
+                if vout["scriptPubKey"]["type"] == "multisig":
+                    continue
+                output = Output(txid=tx['txid'], n=vout['n'], value=vout['value'], address=scriptpubkey_to_address(vout['scriptPubKey']))
+                self.db.add(output)
             self.db.add(transaction)
         
         self.db.commit()
 
     def _calculate_fee(self, tx):
-        if 'coinbase' in tx['vin'][0]:  # Skip coinbase transactions
-            return 0
-        
-        total_in = sum(
-            float(self.rpc.get_transaction(vin['txid'])['vout'][vin['vout']]['value'])
-            for vin in tx['vin']
-        )
-        total_out = sum(float(vout['value']) for vout in tx['vout'])
-        return total_in - total_out
+        return tx.get('fee', 0)
 
     def index_range(self, start_height, end_height):
         for height in range(start_height, end_height + 1):
@@ -62,5 +69,8 @@ class BitcoinIndexer:
 
 if __name__ == "__main__":
     indexer = BitcoinIndexer()
-    # Example: Index the first 1000 blocks
-    indexer.index_range(2, 5) 
+    # time when it started and when it ended
+    start_time = time.time()
+    indexer.index_range(800_001, 800_100)
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time} seconds")
