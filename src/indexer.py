@@ -2,6 +2,7 @@ import time
 from bitcoin_rpc import BitcoinRPC
 from database import Input, Output, init_db, Block, Transaction
 from datetime import datetime
+import threading
 
 from utils import scriptpubkey_to_address
 
@@ -68,9 +69,33 @@ class BitcoinIndexer:
                 continue
 
 if __name__ == "__main__":
-    indexer = BitcoinIndexer()
-    # time when it started and when it ended
+    NUM_THREADS = 1
+    START_BLOCK = 10_001
+    END_BLOCK = 30_000
+    
+    # Calculate blocks per thread
+    blocks_per_thread = (END_BLOCK - START_BLOCK + 1) // NUM_THREADS
+    
+    indexers = [BitcoinIndexer() for _ in range(NUM_THREADS)]
+    threads = []
+    
     start_time = time.time()
-    indexer.index_range(800_001, 800_100)
+    
+    # Create and start threads
+    for i in range(NUM_THREADS):
+        start = START_BLOCK + (i * blocks_per_thread)
+        end = start + blocks_per_thread - 1 if i < NUM_THREADS - 1 else END_BLOCK
+        thread = threading.Thread(
+            target=indexers[i].index_range,
+            args=(start, end)
+        )
+        threads.append(thread)
+        thread.start()
+        print(f"Thread {i+1} processing blocks {start} to {end}")
+    
+    # Wait for all threads to complete
+    for thread in threads:
+        thread.join()
+    
     end_time = time.time()
     print(f"Time taken: {end_time - start_time} seconds")
