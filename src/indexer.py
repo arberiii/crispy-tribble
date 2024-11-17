@@ -4,27 +4,49 @@ from database import Input, Output, init_db, Block, Transaction
 from datetime import datetime
 import threading
 
-from utils import scriptpubkey_to_address
+from utils import scriptpubkey_to_address, save_block_data, load_block_data
 
 class BitcoinIndexer:
     def __init__(self):
         self.rpc = BitcoinRPC()
         self.db = init_db()
+        self.cache_dir = "data/blocks"
+
+    def _get_block_data(self, height):
+        # Try to load from cache first
+        try:
+            print(f"Loading block {height} from cache")
+            return load_block_data(height, self.cache_dir)
+        except FileNotFoundError:
+            # If not in cache, fetch from RPC
+            # Get block hash
+            block_hash = self.rpc.get_block_hash(height)
+            print(f"Block hash: {block_hash}")
+
+            print(f"Fetching block {height} from RPC")
+            block_data = self.rpc.get_block(block_hash)
+            
+            # Add height to block data for caching
+            block_data['height'] = height
+            
+            # Cache the result
+            save_block_data(block_data, self.cache_dir)
+            
+            return block_data
 
     def index_block(self, height):
-        # Get block hash
-        block_hash = self.rpc.get_block_hash(height)
-        print(f"Block hash: {block_hash}")
         
-        # Get full block data
-        block_data = self.rpc.get_block(block_hash)
+        
+        # Get block data (now with caching)
+        block_data = self._get_block_data(height)
         
         # Create block record
         block = Block(
             height=height,
-            hash=block_hash,
+            hash=block_data['hash'],
             timestamp=datetime.fromtimestamp(block_data['time'])
         )
+        return
         
         # Add block to database
         self.db.add(block)
@@ -70,7 +92,7 @@ class BitcoinIndexer:
 
 if __name__ == "__main__":
     NUM_THREADS = 1
-    START_BLOCK = 10_001
+    START_BLOCK = 0
     END_BLOCK = 30_000
     
     # Calculate blocks per thread
