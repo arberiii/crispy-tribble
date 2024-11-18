@@ -91,9 +91,9 @@ class BitcoinIndexer:
                 continue
 
 if __name__ == "__main__":
-    NUM_THREADS = 1
-    START_BLOCK = 0
-    END_BLOCK = 30_000
+    NUM_THREADS = 6
+    START_BLOCK = 100_000
+    END_BLOCK = 200_000
     
     # Calculate blocks per thread
     blocks_per_thread = (END_BLOCK - START_BLOCK + 1) // NUM_THREADS
