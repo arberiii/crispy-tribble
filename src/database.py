@@ -8,7 +8,7 @@ if not DATABASE_URL:
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker, relationship, Session
 
 Base = declarative_base()
 
@@ -35,6 +35,7 @@ class Input(Base):
 
     id = Column(Integer, primary_key=True)
     txid = Column(String)
+    tx_spent = Column(String)
     vout = Column(Integer)
 
 class Output(Base):
@@ -49,4 +50,31 @@ class Output(Base):
 def init_db():
     engine = create_engine(DATABASE_URL)
     Base.metadata.create_all(engine)
-    return sessionmaker(bind=engine)() 
+    return sessionmaker(bind=engine)()
+
+def delete_all_data_of_a_block(db: Session, block_height: int) -> None:
+    transactions = get_all_transactions_from_a_block(db, block_height)
+    delete_all_transactions_from_a_block(db, block_height)
+    delete_all_outputs_from_transactions(db, transactions)
+    delete_block(db, block_height)
+
+def delete_block(db: Session, block_height: int) -> None:
+    db.query(Block).filter(Block.height == block_height).delete()
+    db.commit()
+
+def get_all_transactions_from_a_block(db: Session, block_height: int) -> list[Transaction]:
+    return db.query(Transaction).filter(Transaction.block_height == block_height).all()
+
+def delete_all_transactions_from_a_block(db: Session, block_height: int) -> None:
+    db.query(Transaction).filter(Transaction.block_height == block_height).delete()
+    db.commit()
+
+def delete_all_outputs_from_transactions(db: Session, transactions: list[Transaction]) -> None:
+    for transaction in transactions:
+        db.query(Output).filter(Output.txid == transaction.txid).delete()
+    db.commit()
+
+def delete_all_inputs_from_transactions(db: Session, transactions: list[Transaction]) -> None:
+    for transaction in transactions:
+        db.query(Input).filter(Input.tx_spent == transaction.txid).delete()
+    db.commit()

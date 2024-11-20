@@ -69,7 +69,7 @@ class BitcoinIndexer:
             for vin in tx['vin']:
                 if 'txid' not in vin or 'vout' not in vin:
                     continue
-                input = Input(txid=vin['txid'], vout=vin['vout'])
+                input = Input(txid=vin['txid'], vout=vin['vout'], tx_spent=tx['txid'])
                 self.db.add(input)
             for vout in tx['vout']:
                 if 'n' not in vout or 'value' not in vout or 'scriptPubKey' not in vout:
@@ -97,9 +97,9 @@ class BitcoinIndexer:
                 continue
 
 if __name__ == "__main__":
-    NUM_THREADS = 1
+    NUM_THREADS = 10
     START_BLOCK = 1
-    END_BLOCK = 166533
+    END_BLOCK = 250_000
     
     # Calculate blocks per thread
     blocks_per_thread = (END_BLOCK - START_BLOCK + 1) // NUM_THREADS
