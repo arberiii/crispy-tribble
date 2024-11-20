@@ -1,6 +1,6 @@
 import os
 import time
-from bitcoin_rpc import BitcoinRPC
+from rpc import BitcoinRPC
 from database import Input, Output, init_db, Block, Transaction
 from datetime import datetime
 import threading
@@ -11,10 +11,11 @@ from utils import scriptpubkey_to_address, save_block_data, load_block_data
 # Use environment variables for database credentials
 load_dotenv()
 ENABLE_BLOCK_CACHE = os.getenv('ENABLE_BLOCK_CACHE') == 'true'
+BITCOIN_RPC_URLS = os.getenv('BITCOIN_RPC_URLS').split(',')
 
 class BitcoinIndexer:
-    def __init__(self):
-        self.rpc = BitcoinRPC()
+    def __init__(self, bitcoin_rpc_url: str):
+        self.rpc = BitcoinRPC(bitcoin_rpc_url)
         self.db = init_db()
         self.cache_dir = "data/blocks"
 
@@ -97,14 +98,14 @@ class BitcoinIndexer:
                 continue
 
 if __name__ == "__main__":
-    NUM_THREADS = 10
-    START_BLOCK = 1
-    END_BLOCK = 250_000
+    NUM_THREADS = 3
+    START_BLOCK = 250_000
+    END_BLOCK = 250_004
     
     # Calculate blocks per thread
     blocks_per_thread = (END_BLOCK - START_BLOCK + 1) // NUM_THREADS
     
-    indexers = [BitcoinIndexer() for _ in range(NUM_THREADS)]
+    indexers = [BitcoinIndexer(BITCOIN_RPC_URLS[i%len(BITCOIN_RPC_URLS)]) for i in range(NUM_THREADS)]
     threads = []
     
     start_time = time.time()

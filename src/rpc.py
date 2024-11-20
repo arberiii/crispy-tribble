@@ -1,14 +1,10 @@
-import os
 from bitcoinrpc.authproxy import AuthServiceProxy
-from dotenv import load_dotenv
 
 class BitcoinRPC:
-    def __init__(self):
-        load_dotenv()
-        rpc_connection = os.getenv('BITCOIN_RPC_URL')
-        if not rpc_connection:
+    def __init__(self, rpc_url: str):
+        if not rpc_url:
             raise ValueError("BITCOIN_RPC_URL environment variable is not set")
-        self.rpc = AuthServiceProxy(rpc_connection)
+        self.rpc = AuthServiceProxy(rpc_url)
 
     def get_block_count(self):
         return self.rpc.getblockcount()
@@ -20,4 +16,5 @@ class BitcoinRPC:
         return self.rpc.getblock(block_hash, 2)  # 2 for verbose transaction data
 
     def get_transaction(self, txid):
-        return self.rpc.getrawtransaction(txid, True)  # True for verbose output 
+        return self.rpc.getrawtransaction(txid, True)  # True for verbose output
+
