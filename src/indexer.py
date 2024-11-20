@@ -1,10 +1,16 @@
+import os
 import time
 from bitcoin_rpc import BitcoinRPC
 from database import Input, Output, init_db, Block, Transaction
 from datetime import datetime
 import threading
+from dotenv import load_dotenv
 
 from utils import scriptpubkey_to_address, save_block_data, load_block_data
+
+# Use environment variables for database credentials
+load_dotenv()
+ENABLE_BLOCK_CACHE = os.getenv('ENABLE_BLOCK_CACHE') == 'true'
 
 class BitcoinIndexer:
     def __init__(self):
@@ -29,8 +35,9 @@ class BitcoinIndexer:
             # Add height to block data for caching
             block_data['height'] = height
             
-            # Cache the result
-            save_block_data(block_data, self.cache_dir)
+            if ENABLE_BLOCK_CACHE:
+                # Cache the result
+                save_block_data(block_data, self.cache_dir)
             
             return block_data
 
@@ -46,7 +53,6 @@ class BitcoinIndexer:
             hash=block_data['hash'],
             timestamp=datetime.fromtimestamp(block_data['time'])
         )
-        return
         
         # Add block to database
         self.db.add(block)
@@ -91,9 +97,9 @@ class BitcoinIndexer:
                 continue
 
 if __name__ == "__main__":
-    NUM_THREADS = 6
-    START_BLOCK = 100_000
-    END_BLOCK = 200_000
+    NUM_THREADS = 1
+    START_BLOCK = 1
+    END_BLOCK = 166533
     
     # Calculate blocks per thread
     blocks_per_thread = (END_BLOCK - START_BLOCK + 1) // NUM_THREADS
